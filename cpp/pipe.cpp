@@ -23,17 +23,10 @@ Revision History:
 
 static volatile long pipeSerialNumber;
 
-BOOL
-APIENTRY
-MyCreatePipeEx(
-    OUT LPHANDLE lpReadPipe,
-    OUT LPHANDLE lpWritePipe,
-    IN LPSECURITY_ATTRIBUTES lpPipeAttributes,
-    IN DWORD nSize,
-    DWORD dwReadMode,
-    DWORD dwWriteMode
-    )
-
+BOOL MyCreatePipeEx(
+    LPHANDLE lpReadPipe,
+    LPHANDLE lpWritePipe,
+    LPSECURITY_ATTRIBUTES lpPipeAttributes)
 /*++
 Routine Description:
     The CreatePipeEx API is used to create an anonymous pipe I/O device.
@@ -57,11 +50,6 @@ Arguments:
         process creation.  Otherwise, the optional security attributes
         are used on the pipe, and the inherit handles flag effects both
         pipe handles.
-    nSize - Supplies the requested buffer size for the pipe.  This is
-        only a suggestion and is used by the operating system to
-        calculate an appropriate buffering mechanism.  A value of zero
-        indicates that the system is to choose the default buffering
-        scheme.
 Return Value:
     TRUE - The operation was successful.
     FALSE/NULL - The operation failed. Extended error status is available
@@ -74,21 +62,10 @@ Return Value:
   char pipeNameBuffer[ MAX_PATH ];
 
   //
-  // Only one valid OpenMode flag - FILE_FLAG_OVERLAPPED
-  //
-
-  if ((dwReadMode | dwWriteMode) & (~FILE_FLAG_OVERLAPPED)) {
-    SetLastError(ERROR_INVALID_PARAMETER);
-    return FALSE;
-  }
-
-  //
   //  Set the default timeout to 120 seconds
   //
 
-  if (nSize == 0) {
-    nSize = 4096;
-  }
+  DWORD nSize = 4096;
 
   sprintf(pipeNameBuffer,
           "\\\\.\\Pipe\\RemoteExeAnon.%08x.%08x",
@@ -98,7 +75,7 @@ Return Value:
 
   ReadPipeHandle = CreateNamedPipeA(
                        pipeNameBuffer,
-                       PIPE_ACCESS_INBOUND | dwReadMode,
+                       PIPE_ACCESS_INBOUND | FILE_FLAG_OVERLAPPED,
                        PIPE_TYPE_BYTE | PIPE_WAIT,
                        1,             // Number of pipes
                        nSize,         // Out buffer size
@@ -117,7 +94,7 @@ Return Value:
                       0,                         // No sharing
                       lpPipeAttributes,
                       OPEN_EXISTING,
-                      FILE_ATTRIBUTE_NORMAL | dwWriteMode,
+                      FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OVERLAPPED,
                       NULL                       // Template file
                     );
 
